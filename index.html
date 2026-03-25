@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FX Journal — Giorgio Benetti</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0d0f12;
+  --bg2: #13161b;
+  --bg3: #1a1e25;
+  --border: rgba(255,255,255,0.07);
+  --border2: rgba(255,255,255,0.12);
+  --text: #e8eaf0;
+  --muted: #6b7280;
+  --accent: #22c55e;
+  --accent2: #16a34a;
+  --red: #ef4444;
+  --amber: #f59e0b;
+  --blue: #3b82f6;
+  --mono: 'DM Mono', monospace;
+  --sans: 'DM Sans', sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14px;min-height:100vh;}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:16px 24px;border-bottom:1px solid var(--border);background:var(--bg2);}
+.logo{font-family:var(--mono);font-size:13px;color:var(--accent);letter-spacing:.1em;}
+.topbar-right{display:flex;align-items:center;gap:12px;}
+.db-status{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);}
+.db-dot{width:7px;height:7px;border-radius:50%;background:var(--muted);}
+.db-dot.ok{background:var(--accent);}
+.db-dot.err{background:var(--red);}
+.nav{display:flex;gap:2px;padding:0 24px;background:var(--bg2);border-bottom:1px solid var(--border);}
+.nav-btn{padding:10px 16px;font-size:13px;font-family:var(--sans);cursor:pointer;border:none;background:none;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px;transition:color .15s;}
+.nav-btn:hover{color:var(--text);}
+.nav-btn.on{color:var(--accent);border-bottom-color:var(--accent);}
+.main{padding:24px;max-width:1400px;margin:0 auto;}
+.sec{display:none;}.sec.on{display:block;}
+/* cards */
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:20px;margin-bottom:16px;}
+.card-title{font-size:11px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:14px;}
+/* metrics */
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:20px;}
+.metric{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:14px 16px;}
+.metric-label{font-size:11px;color:var(--muted);margin-bottom:6px;}
+.metric-val{font-size:24px;font-weight:300;font-family:var(--mono);}
+.metric-val.pos{color:var(--accent);}
+.metric-val.neg{color:var(--red);}
+.metric-val.neu{color:var(--blue);}
+/* table */
+.tbl-wrap{overflow-x:auto;border-radius:8px;border:1px solid var(--border);}
+table{width:100%;border-collapse:collapse;font-size:12px;}
+th{padding:10px 12px;text-align:left;color:var(--muted);font-weight:400;font-size:11px;border-bottom:1px solid var(--border);white-space:nowrap;background:var(--bg3);}
+td{padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:rgba(255,255,255,0.02);}
+/* badges */
+.bdg{font-size:10px;padding:2px 8px;border-radius:20px;font-weight:500;font-family:var(--mono);white-space:nowrap;}
+.b-buy{background:rgba(34,197,94,.15);color:#4ade80;}
+.b-sell{background:rgba(239,68,68,.15);color:#f87171;}
+.b-open{background:rgba(59,130,246,.15);color:#60a5fa;}
+.b-closed{background:rgba(107,114,128,.2);color:#9ca3af;}
+.b-wait{background:rgba(245,158,11,.15);color:#fbbf24;}
+.pp{color:var(--accent);font-family:var(--mono);}
+.pn{color:var(--red);font-family:var(--mono);}
+.mono{font-family:var(--mono);font-size:11px;}
+/* buttons */
+.btn{border:1px solid var(--border2);background:none;border-radius:7px;padding:7px 14px;font-size:13px;cursor:pointer;color:var(--text);font-family:var(--sans);transition:background .15s;}
+.btn:hover{background:var(--bg3);}
+.btn-green{background:var(--accent);color:#000;border-color:var(--accent);font-weight:500;}
+.btn-green:hover{background:var(--accent2);}
+.btn-sm{padding:3px 9px;font-size:11px;}
+.btn-red{color:var(--red);border-color:rgba(239,68,68,.3);}
+/* upload */
+.upload-area{border:1px dashed var(--border2);border-radius:10px;padding:40px;text-align:center;cursor:pointer;color:var(--muted);font-size:13px;transition:all .15s;}
+.upload-area:hover{border-color:var(--accent);color:var(--accent);background:rgba(34,197,94,.04);}
+/* filters */
+.filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;align-items:center;}
+.filters select,.filters input{background:var(--bg3);border:1px solid var(--border2);border-radius:7px;padding:6px 10px;font-size:12px;color:var(--text);font-family:var(--sans);}
+/* last import */
+.import-bar{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;font-size:12px;}
+.i-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+/* modal */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:100;align-items:center;justify-content:center;}
+.modal-overlay.show{display:flex;}
+.modal{background:var(--bg2);border:1px solid var(--border2);border-radius:12px;padding:24px;width:380px;max-width:95vw;}
+.modal-title{font-size:14px;font-weight:500;margin-bottom:18px;}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;}
+.fld{display:flex;flex-direction:column;gap:5px;}
+.fld label{font-size:11px;color:var(--muted);}
+.fld input,.fld select{background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:7px 10px;font-size:13px;color:var(--text);font-family:var(--sans);}
+.fld input:focus,.fld select:focus{outline:none;border-color:var(--accent);}
+/* stat by pair */
+.pair-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;}
+.pair-card{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:14px;}
+.pair-name{font-family:var(--mono);font-size:13px;font-weight:500;margin-bottom:10px;}
+.pair-stat{display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;}
+.pair-stat span:first-child{color:var(--muted);}
+/* loading */
+.loading{text-align:center;padding:40px;color:var(--muted);font-size:13px;}
+.spin{display:inline-block;width:16px;height:16px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite;margin-right:8px;vertical-align:middle;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.edit-link{color:var(--muted);font-size:11px;cursor:pointer;text-decoration:underline;text-underline-offset:2px;}
+.edit-link:hover{color:var(--accent);}
+.toast{position:fixed;bottom:24px;right:24px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:10px 16px;font-size:13px;z-index:200;opacity:0;transform:translateY(8px);transition:all .2s;}
+.toast.show{opacity:1;transform:translateY(0);}
+.toast.ok{border-color:var(--accent);color:var(--accent);}
+.toast.err{border-color:var(--red);color:var(--red);}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo">FX JOURNAL</div>
+  <div class="topbar-right">
+    <div class="db-status"><span class="db-dot" id="db-dot"></span><span id="db-label">connecting...</span></div>
+  </div>
+</div>
+
+<div class="nav">
+  <button class="nav-btn on" onclick="go('import',this)">Import MT4</button>
+  <button class="nav-btn" onclick="go('trades',this)">Storico</button>
+  <button class="nav-btn" onclick="go('stats',this)">Statistiche</button>
+  <button class="nav-btn" onclick="go('orders',this)">Ordini attivi</button>
+  <button class="nav-btn" onclick="go('export',this)">Export</button>
+</div>
+
+<div class="main">
+
+  <!-- IMPORT -->
+  <div id="s-import" class="sec on">
+    <div id="import-bar-wrap"></div>
+    <div class="card">
+      <div class="card-title">Carica statement MT4</div>
+      <p style="color:var(--muted);font-size:13px;margin-bottom:16px;">Salva il report da MetaTrader 4 come file HTML (File → Salva come). I ticket già presenti nel database non vengono reimportati.</p>
+      <div class="upload-area" onclick="document.getElementById('htmlFile').click()">
+        Clicca per caricare Statement.html di MT4
+      </div>
+      <input type="file" id="htmlFile" accept=".html,.htm" style="display:none;" onchange="importMT4(event)">
+      <div id="import-msg" style="margin-top:12px;font-size:13px;"></div>
+    </div>
+    <div id="import-preview"></div>
+  </div>
+
+  <!-- TRADES -->
+  <div id="s-trades" class="sec">
+    <div class="metrics" id="metrics-row"></div>
+    <div class="filters">
+      <select id="f-pair" onchange="renderTrades()"><option value="">Tutte le coppie</option></select>
+      <select id="f-dir" onchange="renderTrades()">
+        <option value="">Long + Short</option>
+        <option value="buy">Long (buy)</option>
+        <option value="sell">Short (sell)</option>
+      </select>
+      <select id="f-status" onchange="renderTrades()">
+        <option value="">Tutti</option>
+        <option value="closed">Chiusi</option>
+        <option value="open">Aperti</option>
+      </select>
+      <input type="text" id="f-search" placeholder="Cerca ticket / coppia..." style="width:160px;" oninput="renderTrades()">
+    </div>
+    <div class="tbl-wrap" id="trades-table"></div>
+  </div>
+
+  <!-- STATS -->
+  <div id="s-stats" class="sec">
+    <div class="metrics" id="global-stats"></div>
+    <div class="card">
+      <div class="card-title">Performance per coppia</div>
+      <div class="pair-grid" id="pair-stats"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Analisi soglie RSI exit (trade chiusi con RSI annotato)</div>
+      <div class="tbl-wrap" id="rsi-analysis-table"></div>
+    </div>
+  </div>
+
+  <!-- ORDERS -->
+  <div id="s-orders" class="sec">
+    <div class="card">
+      <div class="card-title">Ordini limite attivi — ultimo import</div>
+      <div class="tbl-wrap" id="orders-table"></div>
+    </div>
+  </div>
+
+  <!-- EXPORT -->
+  <div id="s-export" class="sec">
+    <div class="metrics" id="export-metrics"></div>
+    <div class="card">
+      <div class="card-title">Esporta dati per analisi</div>
+      <p style="color:var(--muted);font-size:13px;margin-bottom:16px;">Esporta tutto il database in JSON o CSV. Carica il file JSON in una chat con Claude per l'analisi RSI exit.</p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <button class="btn btn-green" onclick="exportJSON()">Esporta JSON</button>
+        <button class="btn" onclick="exportCSV()">Esporta CSV</button>
+        <button class="btn btn-red" onclick="clearAll()">Svuota database</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Come usare il file con Claude</div>
+      <p style="color:var(--muted);font-size:13px;line-height:1.7;">
+        1. Clicca "Esporta JSON" — scarica <span class="mono">trading_journal.json</span><br>
+        2. Apri una nuova chat su claude.ai e carica il file<br>
+        3. Scrivi: <em style="color:var(--text);">"Analizza questi trade e confronta i pip medi per soglia RSI di uscita: 45, 50 e 55"</em>
+      </p>
+    </div>
+  </div>
+
+</div>
+
+<!-- MODAL RSI -->
+<div class="modal-overlay" id="modal-rsi">
+  <div class="modal">
+    <div class="modal-title">RSI — <span id="modal-label" style="font-family:var(--mono);font-size:13px;color:var(--muted);"></span></div>
+    <div class="form-grid">
+      <div class="fld"><label>RSI 4H entrata</label><input type="number" step="0.1" id="m-r4in" placeholder="72.5"></div>
+      <div class="fld"><label>RSI 15min entrata</label><input type="number" step="0.1" id="m-r15in" placeholder="68.0"></div>
+      <div class="fld"><label>RSI 4H uscita</label><input type="number" step="0.1" id="m-r4out" placeholder="54.2"></div>
+      <div class="fld"><label>Divergenza</label>
+        <select id="m-div">
+          <option value="no">No</option>
+          <option value="4h">Sì — 4H</option>
+          <option value="15m">Sì — 15min</option>
+          <option value="entrambi">Sì — entrambi</option>
+        </select>
+      </div>
+    </div>
+    <div class="fld" style="margin-bottom:16px;"><label>Note</label><input type="text" id="m-notes" placeholder="es. divergenza bearish, doppio massimo..."></div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-green" onclick="saveRSI()">Salva</button>
+      <button class="btn" onclick="closeModal()">Annulla</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SUPABASE_URL = 'https://pugpcfgkqyuibvcsyucq.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_-zVHgwihCu4a_UVMjB-w4g_mJzA6qXK';
+const HEADERS = {'Content-Type':'application/json','apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY};
+
+let allTrades = [];
+let allOrders = [];
+let editingTicket = null;
+let lastImport = JSON.parse(localStorage.getItem('fx_last_import')||'null');
+
+// ── DB ──────────────────────────────────────────────────────────────
+async function dbGet(table, params=''){
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${params}`, {headers:{...HEADERS,'Prefer':'return=representation'}});
+  if(!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+async function dbUpsert(table, rows){
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
+    method:'POST', headers:{...HEADERS,'Prefer':'resolution=merge-duplicates,return=representation'},
+    body:JSON.stringify(rows)
+  });
+  if(!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+async function dbPatch(table, match, data){
+  const params = Object.entries(match).map(([k,v])=>`${k}=eq.${v}`).join('&');
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${params}`, {
+    method:'PATCH', headers:{...HEADERS,'Prefer':'return=representation'},
+    body:JSON.stringify(data)
+  });
+  if(!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+async function dbDelete(table){
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?ticket=neq.XXXXXX`, {
+    method:'DELETE', headers:HEADERS
+  });
+  return r.ok;
+}
+
+// ── INIT ─────────────────────────────────────────────────────────────
+async function init(){
+  try{
+    allTrades = await dbGet('trades','order=open_time.desc');
+    setDbStatus(true);
+    renderImportBar();
+    populatePairFilter();
+  }catch(e){
+    setDbStatus(false);
+    showToast('Errore connessione DB: '+e.message,'err');
+  }
+}
+
+function setDbStatus(ok){
+  document.getElementById('db-dot').className='db-dot '+(ok?'ok':'err');
+  document.getElementById('db-label').textContent=ok?'Supabase connesso':'DB non raggiungibile';
+}
+
+// ── NAVIGATION ───────────────────────────────────────────────────────
+function go(id, btn){
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('on'));
+  document.querySelectorAll('.sec').forEach(s=>s.classList.remove('on'));
+  btn.classList.add('on');
+  document.getElementById('s-'+id).classList.add('on');
+  if(id==='trades'){renderMetrics();renderTrades();}
+  if(id==='stats')renderStats();
+  if(id==='orders')renderOrders();
+  if(id==='export')renderExport();
+}
+
+// ── IMPORT ───────────────────────────────────────────────────────────
+function renderImportBar(){
+  const wrap = document.getElementById('import-bar-wrap');
+  if(!lastImport){
+    wrap.innerHTML='<div class="import-bar"><span class="i-dot" style="background:var(--muted)"></span><span style="color:var(--muted)">Nessun import ancora effettuato</span></div>';
+    return;
+  }
+  wrap.innerHTML=`<div class="import-bar">
+    <span class="i-dot" style="background:var(--accent)"></span>
+    <strong>Ultimo import:</strong>
+    <span>${lastImport.file}</span>
+    <span style="color:var(--muted)">${lastImport.date}</span>
+    <span class="pp">+${lastImport.added} nuovi</span>
+    <span style="color:var(--muted)">${lastImport.skipped} già presenti</span>
+    <span style="color:var(--muted)">Totale DB: ${allTrades.length} trade</span>
+  </div>`;
+}
+
+async function importMT4(e){
+  const file = e.target.files[0]; if(!file)return;
+  const msg = document.getElementById('import-msg');
+  msg.innerHTML='<span class="spin"></span>Lettura file...';
+  const text = await file.text();
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(text,'text/html');
+  const rows = Array.from(doc.querySelectorAll('tr'));
+  const existTickets = new Set(allTrades.map(t=>t.ticket));
+  let newTrades=[], newOrders=[], added=0, skipped=0;
+  let inClosed=false, inOpen=false, inOrders=false;
+
+  rows.forEach(row=>{
+    const tds = Array.from(row.querySelectorAll('td'));
+    if(!tds.length)return;
+    const rowText = row.textContent;
+    if(rowText.includes('Closed Transactions:')){inClosed=true;inOpen=false;inOrders=false;return;}
+    if(rowText.includes('Open Trades:')){inClosed=false;inOpen=true;inOrders=false;return;}
+    if(rowText.includes('Working Orders:')){inClosed=false;inOpen=false;inOrders=true;return;}
+    if(rowText.includes('Summary:')){inClosed=false;inOpen=false;inOrders=false;return;}
+    if(tds.length<5)return;
+    const ticket = tds[0].textContent.trim();
+    if(!ticket||ticket==='Ticket'||!/^\d+$/.test(ticket))return;
+    const isCancelled = tds[0].title==='cancelled'||(tds[10]&&tds[10].textContent.trim()==='cancelled');
+
+    if((inClosed||inOpen)&&!isCancelled){
+      if(existTickets.has(ticket)){skipped++;return;}
+      const type = tds[2].textContent.trim().toLowerCase();
+      const dir = type.includes('buy')?'buy':'sell';
+      const pair = tds[4].textContent.trim().toUpperCase();
+      const entry_price = parseFloat(tds[5].textContent.trim())||null;
+      const open_time = tds[1].textContent.trim();
+      let t = {ticket,pair,dir,open_time,entry_price,rsi4h_in:null,rsi15_in:null,rsi4h_out:null,divergence:'no',notes:'',status:inOpen?'open':'closed'};
+      if(inClosed){
+        t.exit_price = parseFloat(tds[9].textContent.trim())||null;
+        t.close_time = tds[8].textContent.trim();
+        t.profit = parseFloat((tds[13].textContent.trim().replace(/\s/g,'')||'0'))||0;
+        const isJPY = pair.includes('JPY');
+        const mult = isJPY?100:10000;
+        t.pip_result = Math.round((t.exit_price-entry_price)*mult*(dir==='buy'?1:-1));
+      }
+      newTrades.push(t);
+      existTickets.add(ticket);
+      added++;
+    }
+
+    if(inOrders){
+      const type = tds[2].textContent.trim().toLowerCase();
+      const pair = tds[4].textContent.trim().toUpperCase();
+      const price = parseFloat(tds[5].textContent.trim())||null;
+      const market_price = parseFloat(tds[9].textContent.trim())||null;
+      newOrders.push({ticket,pair,type,price,market_price,open_time:tds[1].textContent.trim()});
+    }
+  });
+
+  if(newTrades.length){
+    try{
+      msg.innerHTML='<span class="spin"></span>Salvataggio su Supabase...';
+      await dbUpsert('trades', newTrades);
+      allTrades = await dbGet('trades','order=open_time.desc');
+    }catch(err){
+      msg.innerHTML=`<span style="color:var(--red)">Errore DB: ${err.message}</span>`;
+      return;
+    }
+  }
+
+  allOrders = newOrders;
+  lastImport = {file:file.name, date:new Date().toLocaleString('it-IT'), added, skipped};
+  localStorage.setItem('fx_last_import', JSON.stringify(lastImport));
+  renderImportBar();
+  populatePairFilter();
+  msg.innerHTML=`<span style="color:var(--accent)">✓ Import completato:</span> ${added} nuovi trade, ${skipped} già presenti.`;
+  renderImportPreview(added);
+  e.target.value='';
+  showToast(`+${added} trade importati`,'ok');
+}
+
+function renderImportPreview(added){
+  if(!added){document.getElementById('import-preview').innerHTML='';return;}
+  const recent = allTrades.slice(0,added);
+  let html='<div class="card"><div class="card-title">Trade appena importati</div><div class="tbl-wrap"><table><thead><tr><th>Ticket</th><th>Coppia</th><th>Dir.</th><th>Apertura</th><th>Chiusura</th><th>Entrata</th><th>Uscita</th><th>Pip</th><th>P/L €</th><th>RSI</th></tr></thead><tbody>';
+  recent.forEach(t=>{
+    const pip=t.pip_result!=null?`<span class="${t.pip_result>=0?'pp':'pn'}">${t.pip_result>=0?'+':''}${t.pip_result}</span>`:'—';
+    const pl=t.profit!=null?`<span class="${t.profit>=0?'pp':'pn'}">${t.profit>=0?'+':''}${t.profit.toFixed(2)}€</span>`:'—';
+    html+=`<tr><td class="mono">${t.ticket}</td><td><strong>${t.pair}</strong></td><td><span class="bdg ${t.dir==='buy'?'b-buy':'b-sell'}">${t.dir}</span></td><td class="mono">${t.open_time}</td><td class="mono">${t.close_time||'—'}</td><td class="mono">${t.entry_price}</td><td class="mono">${t.exit_price||'—'}</td><td>${pip}</td><td>${pl}</td><td><span class="edit-link" onclick="openModal('${t.ticket}')">+ RSI</span></td></tr>`;
+  });
+  html+='</tbody></table></div></div>';
+  document.getElementById('import-preview').innerHTML=html;
+}
+
+// ── TRADES ───────────────────────────────────────────────────────────
+function renderMetrics(){
+  const closed = allTrades.filter(t=>t.status==='closed');
+  const open = allTrades.filter(t=>t.status==='open');
+  const totalPip = closed.reduce((s,t)=>s+(t.pip_result||0),0);
+  const avgPip = closed.length ? (totalPip/closed.length).toFixed(1) : 0;
+  const totalPL = closed.reduce((s,t)=>s+(t.profit||0),0);
+  const wr = closed.length ? Math.round(closed.filter(t=>(t.pip_result||0)>0).length/closed.length*100) : 0;
+  document.getElementById('metrics-row').innerHTML=`
+    <div class="metric"><div class="metric-label">Trade chiusi</div><div class="metric-val neu">${closed.length}</div></div>
+    <div class="metric"><div class="metric-label">Posizioni aperte</div><div class="metric-val neu">${open.length}</div></div>
+    <div class="metric"><div class="metric-label">Pip totali</div><div class="metric-val ${totalPip>=0?'pos':'neg'}">${totalPip>=0?'+':''}${totalPip}</div></div>
+    <div class="metric"><div class="metric-label">Pip medi/trade</div><div class="metric-val ${avgPip>=0?'pos':'neg'}">${avgPip>=0?'+':''}${avgPip}</div></div>
+    <div class="metric"><div class="metric-label">P/L totale</div><div class="metric-val ${totalPL>=0?'pos':'neg'}">${totalPL>=0?'+':''}${totalPL.toFixed(2)}€</div></div>
+    <div class="metric"><div class="metric-label">Win rate</div><div class="metric-val">${wr}%</div></div>
+  `;
+}
+
+function renderTrades(){
+  const fp=document.getElementById('f-pair').value;
+  const fd=document.getElementById('f-dir').value;
+  const fs=document.getElementById('f-status').value;
+  const fq=(document.getElementById('f-search').value||'').toLowerCase();
+  let data=allTrades.filter(t=>
+    (!fp||t.pair===fp)&&(!fd||t.dir===fd)&&(!fs||t.status===fs)&&
+    (!fq||t.ticket.includes(fq)||t.pair.toLowerCase().includes(fq))
+  );
+  if(!data.length){document.getElementById('trades-table').innerHTML='<div class="loading">Nessun trade trovato. Importa uno statement MT4.</div>';return;}
+  let html='<table><thead><tr><th>Ticket</th><th>Coppia</th><th>Dir.</th><th>Apertura</th><th>Chiusura</th><th>Entrata</th><th>Uscita</th><th>Pip</th><th>P/L €</th><th>RSI 4H in</th><th>RSI 4H out</th><th>Div.</th><th>Stato</th><th></th></tr></thead><tbody>';
+  data.forEach(t=>{
+    const pip=t.pip_result!=null?`<span class="${t.pip_result>=0?'pp':'pn'}">${t.pip_result>=0?'+':''}${t.pip_result}</span>`:'—';
+    const pl=t.profit!=null?`<span class="${t.profit>=0?'pp':'pn'}">${t.profit>=0?'+':''}${t.profit.toFixed(2)}€</span>`:t.float_pl!=null?`<span class="${t.float_pl>=0?'pp':'pn'}">${t.float_pl>=0?'+':''}${t.float_pl.toFixed(2)}€ flt</span>`:'—';
+    const rsiIn=t.rsi4h_in?`<span class="mono" style="color:${t.rsi4h_in>70?'#f87171':t.rsi4h_in<30?'#4ade80':'var(--text)'}">${t.rsi4h_in}</span>`:`<span class="edit-link" onclick="openModal('${t.ticket}')">+RSI</span>`;
+    const div=t.divergence&&t.divergence!=='no'?`<span style="color:var(--accent);font-size:11px;">${t.divergence}</span>`:'—';
+    html+=`<tr><td class="mono">${t.ticket}</td><td><strong>${t.pair}</strong></td><td><span class="bdg ${t.dir==='buy'?'b-buy':'b-sell'}">${t.dir}</span></td><td class="mono">${t.open_time}</td><td class="mono">${t.close_time||'—'}</td><td class="mono">${t.entry_price}</td><td class="mono">${t.exit_price||'—'}</td><td>${pip}</td><td>${pl}</td><td>${rsiIn}</td><td class="mono">${t.rsi4h_out||'—'}</td><td>${div}</td><td><span class="bdg ${t.status==='open'?'b-open':'b-closed'}">${t.status}</span></td><td><span class="edit-link" onclick="openModal('${t.ticket}')">RSI</span></td></tr>`;
+  });
+  html+='</tbody></table>';
+  document.getElementById('trades-table').innerHTML=html;
+}
+
+function populatePairFilter(){
+  const pairs=[...new Set(allTrades.map(t=>t.pair))].sort();
+  const sel=document.getElementById('f-pair');
+  sel.innerHTML='<option value="">Tutte le coppie</option>';
+  pairs.forEach(p=>sel.innerHTML+=`<option>${p}</option>`);
+}
+
+// ── STATS ────────────────────────────────────────────────────────────
+function renderStats(){
+  const closed = allTrades.filter(t=>t.status==='closed');
+  const totalPip = closed.reduce((s,t)=>s+(t.pip_result||0),0);
+  const avgPip = closed.length?(totalPip/closed.length).toFixed(1):0;
+  const totalPL = closed.reduce((s,t)=>s+(t.profit||0),0);
+  const wr = closed.length?Math.round(closed.filter(t=>(t.pip_result||0)>0).length/closed.length*100):0;
+  const bestTrade = closed.length?closed.reduce((a,b)=>(b.pip_result||0)>(a.pip_result||0)?b:a,closed[0]):null;
+  const worstTrade = closed.length?closed.reduce((a,b)=>(b.pip_result||0)<(a.pip_result||0)?b:a,closed[0]):null;
+
+  document.getElementById('global-stats').innerHTML=`
+    <div class="metric"><div class="metric-label">Pip totali</div><div class="metric-val ${totalPip>=0?'pos':'neg'}">${totalPip>=0?'+':''}${totalPip}</div></div>
+    <div class="metric"><div class="metric-label">Pip medi / trade</div><div class="metric-val ${avgPip>=0?'pos':'neg'}">${avgPip>=0?'+':''}${avgPip}</div></div>
+    <div class="metric"><div class="metric-label">P/L totale</div><div class="metric-val ${totalPL>=0?'pos':'neg'}">${totalPL>=0?'+':''}${totalPL.toFixed(2)}€</div></div>
+    <div class="metric"><div class="metric-label">Win rate</div><div class="metric-val">${wr}%</div></div>
+    <div class="metric"><div class="metric-label">Best trade</div><div class="metric-val pos">${bestTrade?('+'+bestTrade.pip_result+' pip'):'—'}</div></div>
+    <div class="metric"><div class="metric-label">Worst trade</div><div class="metric-val neg">${worstTrade?(worstTrade.pip_result+' pip'):'—'}</div></div>
+  `;
+
+  // Per coppia
+  const pairs = [...new Set(closed.map(t=>t.pair))].sort();
+  const pairHtml = pairs.map(pair=>{
+    const pt = closed.filter(t=>t.pair===pair);
+    const pPip = pt.reduce((s,t)=>s+(t.pip_result||0),0);
+    const pAvg = (pPip/pt.length).toFixed(1);
+    const pWr = Math.round(pt.filter(t=>(t.pip_result||0)>0).length/pt.length*100);
+    const pPL = pt.reduce((s,t)=>s+(t.profit||0),0);
+    return `<div class="pair-card">
+      <div class="pair-name">${pair}</div>
+      <div class="pair-stat"><span>Trade</span><span>${pt.length}</span></div>
+      <div class="pair-stat"><span>Pip totali</span><span class="${pPip>=0?'pp':'pn'}">${pPip>=0?'+':''}${pPip}</span></div>
+      <div class="pair-stat"><span>Pip medi</span><span class="${pAvg>=0?'pp':'pn'}">${pAvg>=0?'+':''}${pAvg}</span></div>
+      <div class="pair-stat"><span>Win rate</span><span>${pWr}%</span></div>
+      <div class="pair-stat"><span>P/L</span><span class="${pPL>=0?'pp':'pn'}">${pPL>=0?'+':''}${pPL.toFixed(2)}€</span></div>
+    </div>`;
+  }).join('');
+  document.getElementById('pair-stats').innerHTML=pairHtml||'<span style="color:var(--muted);font-size:13px;">Nessun dato.</span>';
+
+  // RSI analysis
+  const withRsi = closed.filter(t=>t.rsi4h_out!=null&&t.pip_result!=null);
+  if(!withRsi.length){
+    document.getElementById('rsi-analysis-table').innerHTML='<div class="loading">Nessun trade con RSI uscita annotato.</div>';
+    return;
+  }
+  const buckets=[
+    {label:'≤ 45',fn:t=>t.dir==='sell'?t.rsi4h_out<=45:(100-t.rsi4h_out)<=45},
+    {label:'46 – 50',fn:t=>t.dir==='sell'?(t.rsi4h_out>45&&t.rsi4h_out<=50):((100-t.rsi4h_out)>45&&(100-t.rsi4h_out)<=50)},
+    {label:'51 – 55',fn:t=>t.dir==='sell'?(t.rsi4h_out>50&&t.rsi4h_out<=55):((100-t.rsi4h_out)>50&&(100-t.rsi4h_out)<=55)},
+    {label:'56 – 60',fn:t=>t.dir==='sell'?(t.rsi4h_out>55&&t.rsi4h_out<=60):((100-t.rsi4h_out)>55&&(100-t.rsi4h_out)<=60)},
+    {label:'> 60',fn:t=>t.dir==='sell'?t.rsi4h_out>60:(100-t.rsi4h_out)>60},
+  ];
+  let rsiHtml='<table><thead><tr><th>Soglia RSI uscita</th><th>Trade</th><th>Pip totali</th><th>Pip medi</th><th>Win rate</th><th>P/L €</th></tr></thead><tbody>';
+  buckets.forEach(b=>{
+    const bt=withRsi.filter(b.fn);
+    if(!bt.length){rsiHtml+=`<tr><td class="mono">${b.label}</td><td style="color:var(--muted)">0</td><td colspan="4" style="color:var(--muted)">—</td></tr>`;return;}
+    const bPip=bt.reduce((s,t)=>s+(t.pip_result||0),0);
+    const bAvg=(bPip/bt.length).toFixed(1);
+    const bWr=Math.round(bt.filter(t=>(t.pip_result||0)>0).length/bt.length*100);
+    const bPL=bt.reduce((s,t)=>s+(t.profit||0),0);
+    rsiHtml+=`<tr><td class="mono">${b.label}</td><td>${bt.length}</td><td class="${bPip>=0?'pp':'pn'}">${bPip>=0?'+':''}${bPip}</td><td class="${bAvg>=0?'pp':'pn'}">${bAvg>=0?'+':''}${bAvg}</td><td>${bWr}%</td><td class="${bPL>=0?'pp':'pn'}">${bPL>=0?'+':''}${bPL.toFixed(2)}€</td></tr>`;
+  });
+  rsiHtml+='</tbody></table>';
+  document.getElementById('rsi-analysis-table').innerHTML=rsiHtml;
+}
+
+// ── ORDERS ───────────────────────────────────────────────────────────
+function renderOrders(){
+  if(!allOrders.length){document.getElementById('orders-table').innerHTML='<div class="loading">Nessun ordine attivo nell\'ultimo import.</div>';return;}
+  let html='<table><thead><tr><th>Ticket</th><th>Coppia</th><th>Tipo</th><th>Prezzo ordine</th><th>Prezzo mercato</th><th>Distanza pip</th><th>Apertura</th></tr></thead><tbody>';
+  allOrders.forEach(o=>{
+    const isJPY=o.pair.includes('JPY');
+    const dist=o.market_price?Math.abs(Math.round((o.price-o.market_price)*(isJPY?100:10000)))+'  pip':'—';
+    html+=`<tr><td class="mono">${o.ticket}</td><td><strong>${o.pair}</strong></td><td><span class="bdg b-wait">${o.type}</span></td><td class="mono">${o.price}</td><td class="mono">${o.market_price||'—'}</td><td class="mono">${dist}</td><td class="mono">${o.open_time}</td></tr>`;
+  });
+  html+='</tbody></table>';
+  document.getElementById('orders-table').innerHTML=html;
+}
+
+// ── EXPORT ───────────────────────────────────────────────────────────
+function renderExport(){
+  const withRsi=allTrades.filter(t=>t.rsi4h_in!=null).length;
+  document.getElementById('export-metrics').innerHTML=`
+    <div class="metric"><div class="metric-label">Trade nel DB</div><div class="metric-val neu">${allTrades.length}</div></div>
+    <div class="metric"><div class="metric-label">Con RSI annotato</div><div class="metric-val neu">${withRsi}</div></div>
+    <div class="metric"><div class="metric-label">Senza RSI</div><div class="metric-val" style="color:var(--amber)">${allTrades.length-withRsi}</div></div>
+  `;
+}
+
+function exportJSON(){
+  const blob=new Blob([JSON.stringify({exportDate:new Date().toISOString(),total:allTrades.length,trades:allTrades},null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='fx_journal_'+new Date().toISOString().slice(0,10)+'.json';a.click();
+}
+function exportCSV(){
+  const cols=['ticket','pair','dir','open_time','close_time','entry_price','exit_price','pip_result','profit','rsi4h_in','rsi15_in','rsi4h_out','divergence','notes','status'];
+  let csv=cols.join(',')+'\n';
+  allTrades.forEach(t=>csv+=cols.map(c=>{const v=t[c];return v==null?'':String(v).includes(',')? '"'+v+'"':v;}).join(',')+'\n');
+  const blob=new Blob([csv],{type:'text/csv'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='fx_journal_'+new Date().toISOString().slice(0,10)+'.csv';a.click();
+}
+async function clearAll(){
+  if(!confirm('Sei sicuro? Tutti i trade nel database verranno eliminati.'))return;
+  try{
+    await fetch(`${SUPABASE_URL}/rest/v1/trades?ticket=neq.___NONE___`,{method:'DELETE',headers:HEADERS});
+    allTrades=[];lastImport=null;
+    localStorage.removeItem('fx_last_import');
+    renderImportBar();renderExport();
+    showToast('Database svuotato','ok');
+  }catch(e){showToast('Errore: '+e.message,'err');}
+}
+
+// ── MODAL RSI ────────────────────────────────────────────────────────
+function openModal(ticket){
+  editingTicket=ticket;
+  const t=allTrades.find(x=>x.ticket===ticket);
+  if(!t)return;
+  document.getElementById('modal-label').textContent=ticket+' — '+t.pair;
+  document.getElementById('m-r4in').value=t.rsi4h_in||'';
+  document.getElementById('m-r15in').value=t.rsi15_in||'';
+  document.getElementById('m-r4out').value=t.rsi4h_out||'';
+  document.getElementById('m-div').value=t.divergence||'no';
+  document.getElementById('m-notes').value=t.notes||'';
+  document.getElementById('modal-rsi').classList.add('show');
+}
+function closeModal(){document.getElementById('modal-rsi').classList.remove('show');editingTicket=null;}
+async function saveRSI(){
+  const t=allTrades.find(x=>x.ticket===editingTicket);
+  if(!t)return;
+  const data={
+    rsi4h_in:parseFloat(document.getElementById('m-r4in').value)||null,
+    rsi15_in:parseFloat(document.getElementById('m-r15in').value)||null,
+    rsi4h_out:parseFloat(document.getElementById('m-r4out').value)||null,
+    divergence:document.getElementById('m-div').value,
+    notes:document.getElementById('m-notes').value
+  };
+  try{
+    await dbPatch('trades',{ticket:editingTicket},data);
+    Object.assign(t,data);
+    closeModal();renderTrades();
+    showToast('RSI salvato','ok');
+  }catch(e){showToast('Errore: '+e.message,'err');}
+}
+
+// ── TOAST ────────────────────────────────────────────────────────────
+function showToast(msg,type='ok'){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.className='toast show '+type;
+  setTimeout(()=>t.className='toast',3000);
+}
+
+init();
+</script>
+</body>
+</html>
