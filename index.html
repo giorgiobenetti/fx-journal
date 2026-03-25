@@ -211,22 +211,48 @@ tr:hover td{background:rgba(255,255,255,0.02);}
 
 <!-- MODAL RSI -->
 <div class="modal-overlay" id="modal-rsi">
-  <div class="modal">
-    <div class="modal-title">RSI — <span id="modal-label" style="font-family:var(--mono);font-size:13px;color:var(--muted);"></span></div>
-    <div class="form-grid">
+  <div class="modal" style="width:440px;">
+    <div class="modal-title">Annotazione — <span id="modal-label" style="font-family:var(--mono);font-size:13px;color:var(--muted);"></span></div>
+    <div style="font-size:10px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;">RSI entrata</div>
+    <div class="form-grid" style="margin-bottom:14px;">
       <div class="fld"><label>RSI 4H entrata</label><input type="number" step="0.1" id="m-r4in" placeholder="72.5"></div>
       <div class="fld"><label>RSI 15min entrata</label><input type="number" step="0.1" id="m-r15in" placeholder="68.0"></div>
-      <div class="fld"><label>RSI 4H uscita</label><input type="number" step="0.1" id="m-r4out" placeholder="54.2"></div>
+    </div>
+    <div style="font-size:10px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;">RSI uscita</div>
+    <div class="form-grid" style="margin-bottom:4px;">
+      <div class="fld">
+        <label>RSI 4H uscita reale</label>
+        <input type="number" step="0.1" id="m-r4out" placeholder="54.2">
+        <span style="font-size:11px;color:var(--muted);margin-top:3px;">valore RSI quando hai chiuso</span>
+      </div>
+      <div class="fld">
+        <label>RSI 4H uscita ideale</label>
+        <input type="number" step="0.1" id="m-r4ideal" placeholder="48.0" oninput="previewPipGap()">
+        <span style="font-size:11px;color:var(--amber);margin-top:3px;">dove avresti dovuto chiudere</span>
+      </div>
+    </div>
+    <div id="pip-gap-preview" style="font-size:12px;color:var(--amber);margin-bottom:14px;min-height:18px;"></div>
+    <div class="form-grid" style="margin-bottom:14px;">
       <div class="fld"><label>Divergenza</label>
         <select id="m-div">
           <option value="no">No</option>
-          <option value="4h">Sì — 4H</option>
-          <option value="15m">Sì — 15min</option>
-          <option value="entrambi">Sì — entrambi</option>
+          <option value="4h">Si — 4H</option>
+          <option value="15m">Si — 15min</option>
+          <option value="entrambi">Si — entrambi</option>
+        </select>
+      </div>
+      <div class="fld"><label>Esito uscita</label>
+        <select id="m-exit-quality">
+          <option value="">—</option>
+          <option value="ottima">Ottima — al momento giusto</option>
+          <option value="anticipata">Anticipata — troppo presto</option>
+          <option value="ritardata">Ritardata — troppo tardi</option>
+          <option value="forzata">Forzata — evento esterno</option>
         </select>
       </div>
     </div>
-    <div class="fld" style="margin-bottom:16px;"><label>Note</label><input type="text" id="m-notes" placeholder="es. divergenza bearish, doppio massimo..."></div>
+    <div class="fld" style="margin-bottom:8px;"><label>Note trade</label><input type="text" id="m-notes" placeholder="es. divergenza bearish, doppio massimo, BB in espansione..."></div>
+    <div class="fld" style="margin-bottom:16px;"><label>Note uscita</label><input type="text" id="m-notes-exit" placeholder="es. RSI 15min invertito, non ho aspettato il 4H..."></div>
     <div style="display:flex;gap:8px;">
       <button class="btn btn-green" onclick="saveRSI()">Salva</button>
       <button class="btn" onclick="closeModal()">Annulla</button>
@@ -351,31 +377,36 @@ async function importMT4(e){
 
     if((inClosed||inOpen)&&!isCancelled){
       if(existTickets.has(ticket)){skipped++;return;}
-      const type = tds[2].textContent.trim().toLowerCase();
+      if(tds.length < 6) return;
+      const type = tds[2]?.textContent.trim().toLowerCase()||'';
       const dir = type.includes('buy')?'buy':'sell';
-      const pair = tds[4].textContent.trim().toUpperCase();
-      const entry_price = parseFloat(tds[5].textContent.trim())||null;
-      const open_time = tds[1].textContent.trim();
+      const pair = tds[4]?.textContent.trim().toUpperCase()||'';
+      const entry_price = parseFloat(tds[5]?.textContent.trim())||null;
+      const open_time = tds[1]?.textContent.trim()||'';
+      if(!pair||!entry_price) return;
       let t = {ticket,pair,dir,open_time,entry_price,rsi4h_in:null,rsi15_in:null,rsi4h_out:null,divergence:'no',notes:'',status:inOpen?'open':'closed'};
-      if(inClosed){
-        t.exit_price = parseFloat(tds[9].textContent.trim())||null;
-        t.close_time = tds[8].textContent.trim();
-        t.profit = parseFloat((tds[13].textContent.trim().replace(/\s/g,'')||'0'))||0;
-        const isJPY = pair.includes('JPY');
-        const mult = isJPY?100:10000;
-        t.pip_result = Math.round((t.exit_price-entry_price)*mult*(dir==='buy'?1:-1));
+      if(inClosed && tds.length >= 14){
+        t.exit_price = parseFloat(tds[9]?.textContent.trim())||null;
+        t.close_time = tds[8]?.textContent.trim()||'';
+        const profitRaw = tds[13]?.textContent.trim().replace(/\s/g,'')||'0';
+        t.profit = parseFloat(profitRaw)||0;
+        if(t.exit_price && entry_price){
+          const isJPY = pair.includes('JPY');
+          const mult = isJPY?100:10000;
+          t.pip_result = Math.round((t.exit_price-entry_price)*mult*(dir==='buy'?1:-1));
+        }
       }
       newTrades.push(t);
       existTickets.add(ticket);
       added++;
     }
 
-    if(inOrders){
-      const type = tds[2].textContent.trim().toLowerCase();
-      const pair = tds[4].textContent.trim().toUpperCase();
-      const price = parseFloat(tds[5].textContent.trim())||null;
-      const market_price = parseFloat(tds[9].textContent.trim())||null;
-      newOrders.push({ticket,pair,type,price,market_price,open_time:tds[1].textContent.trim()});
+    if(inOrders && tds.length >= 10){
+      const type = tds[2]?.textContent.trim().toLowerCase()||"";
+      const pair = tds[4]?.textContent.trim().toUpperCase()||"";
+      const price = parseFloat(tds[5]?.textContent.trim())||null;
+      const market_price = parseFloat(tds[9]?.textContent.trim())||null;
+      if(pair && price) newOrders.push({ticket,pair,type,price,market_price,open_time:tds[1]?.textContent.trim()||""});
     }
   });
 
@@ -442,13 +473,16 @@ function renderTrades(){
     (!fq||t.ticket.includes(fq)||t.pair.toLowerCase().includes(fq))
   );
   if(!data.length){document.getElementById('trades-table').innerHTML='<div class="loading">Nessun trade trovato. Importa uno statement MT4.</div>';return;}
-  let html='<table><thead><tr><th>Ticket</th><th>Coppia</th><th>Dir.</th><th>Apertura</th><th>Chiusura</th><th>Entrata</th><th>Uscita</th><th>Pip</th><th>P/L €</th><th>RSI 4H in</th><th>RSI 4H out</th><th>Div.</th><th>Stato</th><th></th></tr></thead><tbody>';
+  let html='<table><thead><tr><th>Ticket</th><th>Coppia</th><th>Dir.</th><th>Apertura</th><th>Chiusura</th><th>Entrata</th><th>Uscita</th><th>Pip</th><th>P/L €</th><th>RSI 4H in</th><th>RSI out reale</th><th>RSI out ideale</th><th>Esito</th><th>Div.</th><th>Stato</th><th></th></tr></thead><tbody>';
   data.forEach(t=>{
     const pip=t.pip_result!=null?`<span class="${t.pip_result>=0?'pp':'pn'}">${t.pip_result>=0?'+':''}${t.pip_result}</span>`:'—';
     const pl=t.profit!=null?`<span class="${t.profit>=0?'pp':'pn'}">${t.profit>=0?'+':''}${t.profit.toFixed(2)}€</span>`:t.float_pl!=null?`<span class="${t.float_pl>=0?'pp':'pn'}">${t.float_pl>=0?'+':''}${t.float_pl.toFixed(2)}€ flt</span>`:'—';
     const rsiIn=t.rsi4h_in?`<span class="mono" style="color:${t.rsi4h_in>70?'#f87171':t.rsi4h_in<30?'#4ade80':'var(--text)'}">${t.rsi4h_in}</span>`:`<span class="edit-link" onclick="openModal('${t.ticket}')">+RSI</span>`;
     const div=t.divergence&&t.divergence!=='no'?`<span style="color:var(--accent);font-size:11px;">${t.divergence}</span>`:'—';
-    html+=`<tr><td class="mono">${t.ticket}</td><td><strong>${t.pair}</strong></td><td><span class="bdg ${t.dir==='buy'?'b-buy':'b-sell'}">${t.dir}</span></td><td class="mono">${t.open_time}</td><td class="mono">${t.close_time||'—'}</td><td class="mono">${t.entry_price}</td><td class="mono">${t.exit_price||'—'}</td><td>${pip}</td><td>${pl}</td><td>${rsiIn}</td><td class="mono">${t.rsi4h_out||'—'}</td><td>${div}</td><td><span class="bdg ${t.status==='open'?'b-open':'b-closed'}">${t.status}</span></td><td><span class="edit-link" onclick="openModal('${t.ticket}')">RSI</span></td></tr>`;
+    const exitQMap={ottima:'var(--accent)',anticipata:'var(--amber)',ritardata:'var(--red)',forzata:'var(--muted)'};
+    const exitQ=t.exit_quality?`<span style="font-size:11px;color:${exitQMap[t.exit_quality]||'var(--muted)'};">${t.exit_quality}</span>`:'—';
+    const idealRsi=t.rsi4h_ideal?`<span class="mono" style="color:var(--amber)">${t.rsi4h_ideal}</span>`:'—';
+    html+=`<tr><td class="mono">${t.ticket}</td><td><strong>${t.pair}</strong></td><td><span class="bdg ${t.dir==='buy'?'b-buy':'b-sell'}">${t.dir}</span></td><td class="mono">${t.open_time}</td><td class="mono">${t.close_time||'—'}</td><td class="mono">${t.entry_price}</td><td class="mono">${t.exit_price||'—'}</td><td>${pip}</td><td>${pl}</td><td>${rsiIn}</td><td class="mono">${t.rsi4h_out||'—'}</td><td>${idealRsi}</td><td>${exitQ}</td><td>${div}</td><td><span class="bdg ${t.status==='open'?'b-open':'b-closed'}">${t.status}</span></td><td><span class="edit-link" onclick="openModal('${t.ticket}')">note</span></td></tr>`;
   });
   html+='</tbody></table>';
   document.getElementById('trades-table').innerHTML=html;
@@ -512,7 +546,7 @@ function renderStats(){
     {label:'56 – 60',fn:t=>t.dir==='sell'?(t.rsi4h_out>55&&t.rsi4h_out<=60):((100-t.rsi4h_out)>55&&(100-t.rsi4h_out)<=60)},
     {label:'> 60',fn:t=>t.dir==='sell'?t.rsi4h_out>60:(100-t.rsi4h_out)>60},
   ];
-  let rsiHtml='<table><thead><tr><th>Soglia RSI uscita</th><th>Trade</th><th>Pip totali</th><th>Pip medi</th><th>Win rate</th><th>P/L €</th></tr></thead><tbody>';
+  let rsiHtml='<table><thead><tr><th>Soglia RSI uscita (reale)</th><th>Trade</th><th>Pip totali</th><th>Pip medi</th><th>Win rate</th><th>P/L €</th><th>Esito uscita</th></tr></thead><tbody>';
   buckets.forEach(b=>{
     const bt=withRsi.filter(b.fn);
     if(!bt.length){rsiHtml+=`<tr><td class="mono">${b.label}</td><td style="color:var(--muted)">0</td><td colspan="4" style="color:var(--muted)">—</td></tr>`;return;}
@@ -520,7 +554,9 @@ function renderStats(){
     const bAvg=(bPip/bt.length).toFixed(1);
     const bWr=Math.round(bt.filter(t=>(t.pip_result||0)>0).length/bt.length*100);
     const bPL=bt.reduce((s,t)=>s+(t.profit||0),0);
-    rsiHtml+=`<tr><td class="mono">${b.label}</td><td>${bt.length}</td><td class="${bPip>=0?'pp':'pn'}">${bPip>=0?'+':''}${bPip}</td><td class="${bAvg>=0?'pp':'pn'}">${bAvg>=0?'+':''}${bAvg}</td><td>${bWr}%</td><td class="${bPL>=0?'pp':'pn'}">${bPL>=0?'+':''}${bPL.toFixed(2)}€</td></tr>`;
+    const bQuality = bt.reduce((acc,t)=>{if(t.exit_quality)acc[t.exit_quality]=(acc[t.exit_quality]||0)+1;return acc;},{});
+    const bQStr = Object.entries(bQuality).map(([k,v])=>`<span style="font-size:11px;color:var(--muted)">${k}: ${v}</span>`).join(' · ')||'—';
+    rsiHtml+=`<tr><td class="mono">${b.label}</td><td>${bt.length}</td><td class="${bPip>=0?'pp':'pn'}">${bPip>=0?'+':''}${bPip}</td><td class="${bAvg>=0?'pp':'pn'}">${bAvg>=0?'+':''}${bAvg}</td><td>${bWr}%</td><td class="${bPL>=0?'pp':'pn'}">${bPL>=0?'+':''}${bPL.toFixed(2)}€</td><td>${bQStr}</td></tr>`;
   });
   rsiHtml+='</tbody></table>';
   document.getElementById('rsi-analysis-table').innerHTML=rsiHtml;
@@ -554,7 +590,7 @@ function exportJSON(){
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='fx_journal_'+new Date().toISOString().slice(0,10)+'.json';a.click();
 }
 function exportCSV(){
-  const cols=['ticket','pair','dir','open_time','close_time','entry_price','exit_price','pip_result','profit','rsi4h_in','rsi15_in','rsi4h_out','divergence','notes','status'];
+  const cols=['ticket','pair','dir','open_time','close_time','entry_price','exit_price','pip_result','profit','rsi4h_in','rsi15_in','rsi4h_out','rsi4h_ideal','divergence','exit_quality','notes','notes_exit','status'];
   let csv=cols.join(',')+'\n';
   allTrades.forEach(t=>csv+=cols.map(c=>{const v=t[c];return v==null?'':String(v).includes(',')? '"'+v+'"':v;}).join(',')+'\n');
   const blob=new Blob([csv],{type:'text/csv'});
@@ -572,16 +608,36 @@ async function clearAll(){
 }
 
 // ── MODAL RSI ────────────────────────────────────────────────────────
+function previewPipGap(){
+  const t=allTrades.find(x=>x.ticket===editingTicket);
+  if(!t||!t.pip_result) return;
+  const ideal=parseFloat(document.getElementById('m-r4ideal').value);
+  const real=parseFloat(document.getElementById('m-r4out').value);
+  const el=document.getElementById('pip-gap-preview');
+  if(!ideal||!real){el.textContent='';return;}
+  // rough estimate: difference in RSI distance * average pip per RSI unit
+  // just show a qualitative note since we don't have price at ideal exit
+  const dir=t.dir;
+  const betterExit = dir==='sell' ? ideal < real : ideal > real;
+  if(betterExit) el.textContent='RSI ideale indica uscita migliore di quella reale';
+  else if(ideal===real) el.textContent='RSI ideale = RSI reale';
+  else el.textContent='RSI ideale indica uscita peggiore di quella reale';
+}
+
 function openModal(ticket){
   editingTicket=ticket;
   const t=allTrades.find(x=>x.ticket===ticket);
   if(!t)return;
-  document.getElementById('modal-label').textContent=ticket+' — '+t.pair;
+  document.getElementById('modal-label').textContent=ticket+' — '+t.pair+' ('+t.dir+')';
   document.getElementById('m-r4in').value=t.rsi4h_in||'';
   document.getElementById('m-r15in').value=t.rsi15_in||'';
   document.getElementById('m-r4out').value=t.rsi4h_out||'';
+  document.getElementById('m-r4ideal').value=t.rsi4h_ideal||'';
   document.getElementById('m-div').value=t.divergence||'no';
+  document.getElementById('m-exit-quality').value=t.exit_quality||'';
   document.getElementById('m-notes').value=t.notes||'';
+  document.getElementById('m-notes-exit').value=t.notes_exit||'';
+  document.getElementById('pip-gap-preview').textContent='';
   document.getElementById('modal-rsi').classList.add('show');
 }
 function closeModal(){document.getElementById('modal-rsi').classList.remove('show');editingTicket=null;}
@@ -592,14 +648,17 @@ async function saveRSI(){
     rsi4h_in:parseFloat(document.getElementById('m-r4in').value)||null,
     rsi15_in:parseFloat(document.getElementById('m-r15in').value)||null,
     rsi4h_out:parseFloat(document.getElementById('m-r4out').value)||null,
+    rsi4h_ideal:parseFloat(document.getElementById('m-r4ideal').value)||null,
     divergence:document.getElementById('m-div').value,
-    notes:document.getElementById('m-notes').value
+    exit_quality:document.getElementById('m-exit-quality').value||null,
+    notes:document.getElementById('m-notes').value||null,
+    notes_exit:document.getElementById('m-notes-exit').value||null
   };
   try{
     await dbPatch('trades',{ticket:editingTicket},data);
     Object.assign(t,data);
     closeModal();renderTrades();
-    showToast('RSI salvato','ok');
+    showToast('Annotazione salvata','ok');
   }catch(e){showToast('Errore: '+e.message,'err');}
 }
 
