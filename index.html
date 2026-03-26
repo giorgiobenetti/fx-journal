@@ -377,7 +377,7 @@ async function importMT4(e){
 
     if((inClosed||inOpen)&&!isCancelled){
       if(existTickets.has(ticket)){skipped++;return;}
-      if(tds.length < 6) return;
+      if(tds.length < 14) return;  // skip balance/deposit rows that have fewer columns
       const type = tds[2]?.textContent.trim().toLowerCase()||'';
       const dir = type.includes('buy')?'buy':'sell';
       const pair = tds[4]?.textContent.trim().toUpperCase()||'';
@@ -413,10 +413,15 @@ async function importMT4(e){
   if(newTrades.length){
     try{
       msg.innerHTML='<span class="spin"></span>Salvataggio su Supabase...';
-      // Normalize: every trade must have identical keys for Supabase upsert
       const schema={ticket:null,pair:null,dir:null,open_time:null,close_time:null,entry_price:null,exit_price:null,pip_result:null,profit:null,float_pl:null,status:'open',rsi4h_in:null,rsi15_in:null,rsi4h_out:null,rsi4h_ideal:null,divergence:'no',exit_quality:null,notes:null,notes_exit:null};
       const normalized = newTrades.map(t => Object.assign({}, schema, t));
-      await dbUpsert('trades', normalized);
+      // Send in chunks of 10 to avoid PGRST102 key mismatch on large batches
+      const chunkSize = 10;
+      for(let i=0; i<normalized.length; i+=chunkSize){
+        const chunk = normalized.slice(i, i+chunkSize);
+        msg.innerHTML=`<span class="spin"></span>Salvataggio ${Math.min(i+chunkSize,normalized.length)}/${normalized.length}...`;
+        await dbUpsert('trades', chunk);
+      }
       allTrades = await dbGet('trades','order=open_time.desc');
     }catch(err){
       msg.innerHTML=`<span style="color:var(--red)">Errore DB: ${err.message}</span>`;
