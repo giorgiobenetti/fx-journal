@@ -413,7 +413,10 @@ async function importMT4(e){
   if(newTrades.length){
     try{
       msg.innerHTML='<span class="spin"></span>Salvataggio su Supabase...';
-      await dbUpsert('trades', newTrades);
+      // Normalize: every trade must have identical keys for Supabase upsert
+      const schema={ticket:null,pair:null,dir:null,open_time:null,close_time:null,entry_price:null,exit_price:null,pip_result:null,profit:null,float_pl:null,status:'open',rsi4h_in:null,rsi15_in:null,rsi4h_out:null,rsi4h_ideal:null,divergence:'no',exit_quality:null,notes:null,notes_exit:null};
+      const normalized = newTrades.map(t => Object.assign({}, schema, t));
+      await dbUpsert('trades', normalized);
       allTrades = await dbGet('trades','order=open_time.desc');
     }catch(err){
       msg.innerHTML=`<span style="color:var(--red)">Errore DB: ${err.message}</span>`;
